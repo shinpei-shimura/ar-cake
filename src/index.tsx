@@ -127,11 +127,6 @@ app.get('/register', (c) => {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">パスワード *</label>
                                 <input type="password" name="password" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">メッセージ</label>
-                                <textarea name="message" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ご自由にメッセージをご記入ください"></textarea>
-                            </div>
                         </div>
 
                         <!-- 画像アップロード -->
@@ -159,6 +154,36 @@ app.get('/register', (c) => {
                                     <label class="block text-sm font-medium text-gray-700 mb-2">画像5</label>
                                     <input type="file" name="image_5" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- お祝いのメッセージ -->
+                    <div class="mt-6 pt-4 border-t">
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-700">お祝いのメッセージ</h3>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    お祝いのメッセージを20字以内でお書きください
+                                    <span class="text-red-500 text-xs ml-1">（任意）</span>
+                                </label>
+                                <div class="relative">
+                                    <textarea 
+                                        name="message" 
+                                        id="messageField"
+                                        rows="3" 
+                                        maxlength="20"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" 
+                                        placeholder="例：ご結婚おめでとうございます">
+                                    </textarea>
+                                    <div class="absolute bottom-2 right-2 text-xs text-gray-500">
+                                        <span id="messageCount">0</span>/20字
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    結婚、出産、新築、開店などのお祝いメッセージをお書きください
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -268,6 +293,42 @@ app.get('/register', (c) => {
                     });
                 }
             });
+
+            // メッセージフィールドの文字数カウント機能
+            const messageField = document.getElementById('messageField');
+            const messageCount = document.getElementById('messageCount');
+            
+            if (messageField && messageCount) {
+                // 初期文字数を表示
+                messageCount.textContent = messageField.value.length;
+                
+                // 文字数の変化を監視
+                messageField.addEventListener('input', function() {
+                    const currentLength = this.value.length;
+                    messageCount.textContent = currentLength;
+                    
+                    // 文字数制限に応じて色を変更
+                    if (currentLength >= 20) {
+                        messageCount.style.color = '#dc2626'; // 赤色
+                        messageField.style.borderColor = '#dc2626';
+                    } else if (currentLength >= 15) {
+                        messageCount.style.color = '#f59e0b'; // オレンジ色
+                        messageField.style.borderColor = '#f59e0b';
+                    } else {
+                        messageCount.style.color = '#6b7280'; // グレー
+                        messageField.style.borderColor = '#d1d5db';
+                    }
+                });
+
+                // 20文字制限のバリデーション
+                messageField.addEventListener('input', function() {
+                    if (this.value.length > 20) {
+                        this.value = this.value.substring(0, 20);
+                        messageCount.textContent = '20';
+                        messageCount.style.color = '#dc2626';
+                    }
+                });
+            }
 
             document.getElementById('registerForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
