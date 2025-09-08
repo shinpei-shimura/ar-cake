@@ -5,6 +5,7 @@ import { CloudflareBindings } from './types'
 import { authRoutes } from './routes/auth'
 import { userRoutes } from './routes/users'
 import { imageRoutes } from './routes/images'
+import { adminRoutes } from './routes/admin'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -18,6 +19,7 @@ app.use('/static/*', serveStatic({ root: './public' }))
 app.route('/api/auth', authRoutes)
 app.route('/api/users', userRoutes)
 app.route('/api/images', imageRoutes)
+app.route('/api/admin', adminRoutes)
 
 // メインページ
 app.get('/', (c) => {
@@ -52,6 +54,11 @@ app.get('/', (c) => {
                     <a href="/login" class="block w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors text-center">
                         <i class="fas fa-sign-in-alt mr-2"></i>
                         ログイン
+                    </a>
+                    
+                    <a href="/admin" class="block w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors text-center">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        管理者ページ
                     </a>
                 </div>
             </div>
@@ -331,6 +338,496 @@ app.get('/login', (c) => {
                     submitBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>ログイン';
                 }
             });
+        </script>
+    </body>
+    </html>
+  `)
+})
+
+// 管理者ページ
+app.get('/admin', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>管理者ページ</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    </head>
+    <body class="bg-gray-100 min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <!-- ヘッダー -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">
+                            <i class="fas fa-shield-alt mr-2 text-red-600"></i>
+                            管理者ダッシュボード
+                        </h1>
+                        <p class="text-gray-600 mt-1" id="adminMessage">読み込み中...</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <a href="/dashboard" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-user mr-2"></i>
+                            ユーザーページ
+                        </a>
+                        <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            ログアウト
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 統計情報 -->
+            <div class="grid md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-users text-3xl text-blue-600 mr-4"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">総ユーザー数</p>
+                            <p class="text-2xl font-bold text-gray-800" id="totalUsers">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-images text-3xl text-purple-600 mr-4"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">総画像数</p>
+                            <p class="text-2xl font-bold text-gray-800" id="totalImages">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-user-plus text-3xl text-green-600 mr-4"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">今日の新規</p>
+                            <p class="text-2xl font-bold text-gray-800" id="todayUsers">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-upload text-3xl text-orange-600 mr-4"></i>
+                        <div>
+                            <p class="text-sm text-gray-600">今日のアップロード</p>
+                            <p class="text-2xl font-bold text-gray-800" id="todayImages">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- タブナビゲーション -->
+            <div class="bg-white rounded-lg shadow-md mb-6">
+                <div class="border-b">
+                    <nav class="flex">
+                        <button id="usersTab" class="tab-button active px-6 py-4 border-b-2 border-blue-500 text-blue-600 font-medium">
+                            <i class="fas fa-users mr-2"></i>
+                            ユーザー管理
+                        </button>
+                        <button id="imagesTab" class="tab-button px-6 py-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-images mr-2"></i>
+                            画像管理
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- ユーザー管理タブ -->
+                <div id="usersContent" class="tab-content p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">登録ユーザー一覧</h3>
+                        <button id="refreshUsers" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-sync mr-2"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div id="usersList" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl"></i>
+                            <p class="mt-2">読み込み中...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 画像管理タブ -->
+                <div id="imagesContent" class="tab-content hidden p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">画像一覧</h3>
+                        <button id="refreshImages" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-sync mr-2"></i>
+                            更新
+                        </button>
+                    </div>
+                    <div id="imagesList" class="space-y-3">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl"></i>
+                            <p class="mt-2">読み込み中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ユーザー詳細モーダル -->
+            <div id="userDetailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">ユーザー詳細情報</h3>
+                            <button id="closeUserDetail" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div id="userDetailContent">
+                            <!-- ユーザー詳細内容が動的に挿入される -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="message" class="mt-4 hidden"></div>
+        </div>
+
+        <script>
+            let currentAdmin = null;
+            let allUsers = [];
+            let allImages = [];
+
+            // 管理者認証チェック
+            async function checkAdminAuth() {
+                try {
+                    const response = await axios.get('/api/users/me');
+                    if (response.data.success) {
+                        currentAdmin = response.data.data;
+                        // 管理者メールチェック
+                        const adminEmails = ['admin@webapp.com', 'manager@webapp.com'];
+                        if (!adminEmails.includes(currentAdmin.email)) {
+                            showMessage('管理者権限がありません', 'error');
+                            setTimeout(() => window.location.href = '/dashboard', 2000);
+                            return;
+                        }
+                        updateAdminUI();
+                        loadStats();
+                        loadUsers();
+                    } else {
+                        window.location.href = '/login';
+                    }
+                } catch (error) {
+                    window.location.href = '/login';
+                }
+            }
+
+            // 管理者UI更新
+            function updateAdminUI() {
+                document.getElementById('adminMessage').textContent = \`管理者: \${currentAdmin.name}さん\`;
+            }
+
+            // 統計情報読み込み
+            async function loadStats() {
+                try {
+                    const response = await axios.get('/api/admin/stats');
+                    if (response.data.success) {
+                        const stats = response.data.data;
+                        document.getElementById('totalUsers').textContent = stats.totalUsers;
+                        document.getElementById('totalImages').textContent = stats.totalImages;
+                        document.getElementById('todayUsers').textContent = stats.todayNewUsers;
+                        document.getElementById('todayImages').textContent = stats.todayNewImages;
+                    }
+                } catch (error) {
+                    console.error('Stats error:', error);
+                }
+            }
+
+            // ユーザー一覧読み込み
+            async function loadUsers() {
+                try {
+                    const response = await axios.get('/api/admin/users');
+                    if (response.data.success) {
+                        allUsers = response.data.data;
+                        displayUsers();
+                    }
+                } catch (error) {
+                    showMessage('ユーザー情報の読み込みに失敗しました', 'error');
+                }
+            }
+
+            // ユーザー一覧表示
+            function displayUsers() {
+                const usersDiv = document.getElementById('usersList');
+                
+                if (allUsers.length === 0) {
+                    usersDiv.innerHTML = \`
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-users text-4xl mb-2"></i>
+                            <p>ユーザーが登録されていません</p>
+                        </div>
+                    \`;
+                    return;
+                }
+
+                const userCards = allUsers.map(user => \`
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onclick="showUserDetail(\${user.id})">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <div class="bg-blue-100 rounded-full p-2">
+                                        <i class="fas fa-user text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">\${user.name}</h4>
+                                        <p class="text-sm text-gray-600">\${user.email}</p>
+                                    </div>
+                                </div>
+                                <div class="grid md:grid-cols-3 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">受注番号:</span>
+                                        <span class="font-medium">\${user.order_number}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">登録日:</span>
+                                        <span class="font-medium">\${new Date(user.created_at).toLocaleDateString('ja-JP')}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">メッセージ:</span>
+                                        <span class="font-medium">\${user.message || 'なし'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="text-blue-600 hover:text-blue-700">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                \`).join('');
+
+                usersDiv.innerHTML = userCards;
+            }
+
+            // ユーザー詳細表示
+            async function showUserDetail(userId) {
+                try {
+                    const response = await axios.get(\`/api/admin/users/\${userId}\`);
+                    if (response.data.success) {
+                        const { user, images } = response.data.data;
+                        
+                        const imageCards = images.length > 0 
+                            ? images.map(img => \`
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h5 class="font-medium">画像\${img.image_number}</h5>
+                                        <div class="flex space-x-2">
+                                            <a href="/api/images/\${img.image_number}?userId=\${user.id}" target="_blank" class="text-blue-600 hover:text-blue-700">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                            <button onclick="copyImageUrl('/api/images/\${img.image_number}?userId=\${user.id}')" class="text-green-600 hover:text-green-700">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        <div>ファイル名: \${img.file_name}</div>
+                                        <div>サイズ: \${(img.file_size / 1024 / 1024).toFixed(2)}MB</div>
+                                        <div>アップロード日: \${new Date(img.created_at).toLocaleDateString('ja-JP')}</div>
+                                        <div class="mt-2">
+                                            <span class="text-gray-500">URL: </span>
+                                            <code class="bg-gray-100 px-2 py-1 rounded text-xs break-all">
+                                                \${window.location.origin}/api/images/\${img.image_number}?userId=\${user.id}
+                                            </code>
+                                        </div>
+                                    </div>
+                                </div>
+                            \`).join('')
+                            : '<div class="text-center text-gray-500 py-4">画像がアップロードされていません</div>';
+
+                        document.getElementById('userDetailContent').innerHTML = \`
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-lg font-semibold mb-4">ユーザー情報</h4>
+                                    <div class="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                        <div><strong>名前:</strong> \${user.name}</div>
+                                        <div><strong>受注番号:</strong> \${user.order_number}</div>
+                                        <div><strong>メール:</strong> \${user.email}</div>
+                                        <div><strong>メッセージ:</strong> \${user.message || 'なし'}</div>
+                                        <div><strong>登録日:</strong> \${new Date(user.created_at).toLocaleDateString('ja-JP')}</div>
+                                        <div><strong>最終更新:</strong> \${new Date(user.updated_at).toLocaleDateString('ja-JP')}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-semibold mb-4">画像一覧 (\${images.length}枚)</h4>
+                                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                                        \${imageCards}
+                                    </div>
+                                </div>
+                            </div>
+                        \`;
+                        
+                        document.getElementById('userDetailModal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    showMessage('ユーザー詳細の読み込みに失敗しました', 'error');
+                }
+            }
+
+            // URL をクリップボードにコピー
+            function copyImageUrl(url) {
+                const fullUrl = window.location.origin + url;
+                navigator.clipboard.writeText(fullUrl).then(() => {
+                    showMessage('URLをコピーしました', 'success');
+                }).catch(() => {
+                    showMessage('URLのコピーに失敗しました', 'error');
+                });
+            }
+
+            // 画像一覧読み込み
+            async function loadImages() {
+                try {
+                    const response = await axios.get('/api/admin/images');
+                    if (response.data.success) {
+                        allImages = response.data.data;
+                        displayImages();
+                    }
+                } catch (error) {
+                    showMessage('画像情報の読み込みに失敗しました', 'error');
+                }
+            }
+
+            // 画像一覧表示
+            function displayImages() {
+                const imagesDiv = document.getElementById('imagesList');
+                
+                if (allImages.length === 0) {
+                    imagesDiv.innerHTML = \`
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-images text-4xl mb-2"></i>
+                            <p>画像がアップロードされていません</p>
+                        </div>
+                    \`;
+                    return;
+                }
+
+                const imageCards = allImages.map(img => \`
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <div class="bg-purple-100 rounded-full p-2">
+                                        <i class="fas fa-image text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800">画像\${img.image_number} - \${img.user_name}</h4>
+                                        <p class="text-sm text-gray-600">\${img.user_email} (\${img.user_order_number})</p>
+                                    </div>
+                                </div>
+                                <div class="grid md:grid-cols-4 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">ファイル名:</span>
+                                        <span class="font-medium">\${img.file_name}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">サイズ:</span>
+                                        <span class="font-medium">\${(img.file_size / 1024 / 1024).toFixed(2)}MB</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">アップロード:</span>
+                                        <span class="font-medium">\${new Date(img.created_at).toLocaleDateString('ja-JP')}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">URL:</span>
+                                        <code class="bg-gray-100 px-1 rounded text-xs">/api/images/\${img.image_number}?userId=\${img.user_id}</code>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="/api/images/\${img.image_number}?userId=\${img.user_id}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button onclick="copyImageUrl('/api/images/\${img.image_number}?userId=\${img.user_id}')" class="text-green-600 hover:text-green-700 p-1">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                \`).join('');
+
+                imagesDiv.innerHTML = imageCards;
+            }
+
+            // メッセージ表示
+            function showMessage(text, type = 'info') {
+                const messageDiv = document.getElementById('message');
+                const className = {
+                    'success': 'bg-green-100 border-green-400 text-green-700',
+                    'error': 'bg-red-100 border-red-400 text-red-700',
+                    'info': 'bg-blue-100 border-blue-400 text-blue-700'
+                }[type];
+                
+                messageDiv.className = \`mt-4 p-3 border rounded \${className}\`;
+                messageDiv.textContent = text;
+                messageDiv.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                }, 3000);
+            }
+
+            // タブ切り替え
+            function switchTab(tabName) {
+                // タブボタンの状態更新
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+                
+                // タブコンテンツの表示切替
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                if (tabName === 'users') {
+                    document.getElementById('usersTab').classList.add('active', 'border-blue-500', 'text-blue-600');
+                    document.getElementById('usersTab').classList.remove('border-transparent', 'text-gray-500');
+                    document.getElementById('usersContent').classList.remove('hidden');
+                } else if (tabName === 'images') {
+                    document.getElementById('imagesTab').classList.add('active', 'border-blue-500', 'text-blue-600');
+                    document.getElementById('imagesTab').classList.remove('border-transparent', 'text-gray-500');
+                    document.getElementById('imagesContent').classList.remove('hidden');
+                    if (allImages.length === 0) {
+                        loadImages();
+                    }
+                }
+            }
+
+            // イベントリスナー
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                try {
+                    await axios.post('/api/auth/logout');
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = '/';
+                }
+            });
+
+            document.getElementById('usersTab').addEventListener('click', () => switchTab('users'));
+            document.getElementById('imagesTab').addEventListener('click', () => switchTab('images'));
+
+            document.getElementById('refreshUsers').addEventListener('click', loadUsers);
+            document.getElementById('refreshImages').addEventListener('click', loadImages);
+
+            document.getElementById('closeUserDetail').addEventListener('click', () => {
+                document.getElementById('userDetailModal').classList.add('hidden');
+            });
+
+            // ウィンドウ関数として公開
+            window.showUserDetail = showUserDetail;
+            window.copyImageUrl = copyImageUrl;
+
+            // 初期化
+            checkAdminAuth();
         </script>
     </body>
     </html>

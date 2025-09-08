@@ -151,3 +151,47 @@ export async function deleteImageRecord(db: D1Database, userId: number, imageNum
     return false;
   }
 }
+
+// 管理者用：全ユーザー取得
+export async function getAllUsers(db: D1Database): Promise<User[]> {
+  try {
+    const users = await db.prepare(`
+      SELECT id, name, order_number, email, message, created_at, updated_at
+      FROM users ORDER BY created_at DESC
+    `).all();
+
+    return users.results as User[];
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    return [];
+  }
+}
+
+// 管理者用：全画像取得（ユーザー情報付き）
+export async function getAllImages(db: D1Database): Promise<any[]> {
+  try {
+    const images = await db.prepare(`
+      SELECT 
+        i.id,
+        i.user_id,
+        i.image_number,
+        i.file_name,
+        i.file_path,
+        i.file_size,
+        i.mime_type,
+        i.created_at,
+        i.updated_at,
+        u.name as user_name,
+        u.email as user_email,
+        u.order_number as user_order_number
+      FROM images i
+      LEFT JOIN users u ON i.user_id = u.id
+      ORDER BY i.created_at DESC
+    `).all();
+
+    return images.results as any[];
+  } catch (error) {
+    console.error('Error getting all images:', error);
+    return [];
+  }
+}

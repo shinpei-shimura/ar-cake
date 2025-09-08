@@ -198,8 +198,19 @@ imageRoutes.delete('/:imageNumber', authMiddleware, async (c) => {
 imageRoutes.get('/:imageNumber', authMiddleware, async (c) => {
   try {
     const { DB, R2 } = c.env;
-    const userId = c.get('userId');
+    let userId = c.get('userId');
     const imageNumber = parseInt(c.req.param('imageNumber'));
+
+    // 管理者の場合は、userIdクエリパラメータを許可
+    const queryUserId = c.req.query('userId');
+    if (queryUserId) {
+      // 管理者権限チェック
+      const userEmail = c.get('userEmail');
+      const adminEmails = ['admin@webapp.com', 'manager@webapp.com'];
+      if (adminEmails.includes(userEmail)) {
+        userId = parseInt(queryUserId);
+      }
+    }
 
     if (imageNumber < 1 || imageNumber > 5) {
       return c.notFound();
