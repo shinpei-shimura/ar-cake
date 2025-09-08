@@ -3,6 +3,11 @@ import { CloudflareBindings, ApiResponse, Image } from '../types';
 import { getTokenFromCookie, verifyToken } from '../utils/auth';
 import { getUserImages, saveImageRecord, deleteImageRecord } from '../utils/database';
 
+// メールアドレスからローカル部分（@より前）を取得
+function getEmailLocalPart(email: string): string {
+  return email.split('@')[0];
+}
+
 export const imageRoutes = new Hono<{ Bindings: CloudflareBindings }>();
 
 // 認証ミドルウェア
@@ -194,11 +199,11 @@ imageRoutes.delete('/:imageNumber', authMiddleware, async (c) => {
   }
 });
 
-// 新しい画像取得（ユーザー名ベースURL）: /api/images/:userName/:imageNumber
-imageRoutes.get('/:userName/:imageNumber', async (c) => {
+// 新しい画像取得（メールローカル部分ベースURL）: /api/images/:emailLocal/:imageNumber
+imageRoutes.get('/:emailLocal/:imageNumber', async (c) => {
   try {
     const { DB, R2 } = c.env;
-    const userName = c.req.param('userName');
+    const emailLocal = c.req.param('emailLocal');
     const imageNumber = c.req.param('imageNumber');
 
     // 画像番号を2桁の数字に正規化（例：1 -> 01, 05 -> 05）
@@ -209,10 +214,11 @@ imageRoutes.get('/:userName/:imageNumber', async (c) => {
       return c.notFound();
     }
 
-    // ユーザー名でユーザーを検索
+    // メールアドレスの@より前の部分でユーザーを検索
+    const emailPattern = `${emailLocal}@%`;
     const user = await DB.prepare(`
-      SELECT id, name FROM users WHERE name = ?
-    `).bind(userName).first();
+      SELECT id, name, email FROM users WHERE email LIKE ?
+    `).bind(emailPattern).first();
 
     if (!user) {
       return c.notFound();
@@ -240,7 +246,7 @@ imageRoutes.get('/:userName/:imageNumber', async (c) => {
     });
 
   } catch (error) {
-    console.error('Get image by username error:', error);
+    console.error('Get image by email local error:', error);
     return c.notFound();
   }
 });

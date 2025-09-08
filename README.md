@@ -58,7 +58,7 @@
 - **GET** `/api/images/my-images` - ユーザーの画像一覧（認証必須）
 - **POST** `/api/images/upload` - 画像アップロード（認証必須）
   - FormData: `image_1`, `image_2`, ..., `image_5`
-- **GET** `/api/images/:userName/:imageNumber` - 画像表示（新形式・認証不要）
+- **GET** `/api/images/:emailLocal/:imageNumber` - 画像表示（新形式・認証不要）
 - **GET** `/api/images/:imageNumber` - 画像表示（旧形式・認証必須）
 - **DELETE** `/api/images/:imageNumber` - 画像削除（認証必須）
 
@@ -120,7 +120,7 @@
 - **ユーザー管理タブ**: 全ユーザー情報一覧・詳細確認
 - **画像管理タブ**: 全画像・URL一覧表示
 - **ユーザー詳細**: ユーザークリックで詳細情報（画像URL含む）表示
-- **URL管理**: 新形式 `/api/images/ユーザー名/画像番号` でURL表示・コピー機能
+- **URL管理**: 新形式 `/api/images/メールローカル部分/画像番号` でURL表示・コピー機能
 
 ### テストアカウント
 
@@ -143,13 +143,14 @@
 ## 画像URL仕様
 
 ### 新しいURL形式（推奨）
-- **形式**: `/api/images/{ユーザー名}/{画像番号}`
-- **例**: `/api/images/田中太郎/01`、`/api/images/佐藤花子/05`
+- **形式**: `/api/images/{メールローカル部分}/{画像番号}`
+- **例**: `/api/images/tanaka/01`、`/api/images/sato/05`、`/api/images/admin/03`
 - **特徴**: 
   - 認証不要でアクセス可能
-  - ユーザー名がURLに含まれ、管理しやすい
+  - メールアドレスの@より前の部分を使用
   - 画像番号は2桁固定（01-05）
-  - 日本語ユーザー名もURL エンコードで対応
+  - 英数字ベースでクリーンなURL
+  - SEO・共有に最適
 
 ### 従来のURL形式（管理者用）
 - **形式**: `/api/images/{画像番号}?userId={ユーザーID}`
