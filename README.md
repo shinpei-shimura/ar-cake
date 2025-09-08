@@ -85,8 +85,10 @@
 - **GET** `/admin` - 管理者ダッシュボード（管理者専用）
 
 ## URLs
-- **開発環境**: https://3000-i3wj386fyitskdom7sb1e-6532622b.e2b.dev
-- **GitHub**: （後でプッシュ予定）
+- **🌐 本番環境**: https://bef07a01.member-system.pages.dev
+- **🚀 Cloudflare Pages**: https://member-system.pages.dev
+- **💻 開発環境**: https://3000-i3wj386fyitskdom7sb1e-6532622b.e2b.dev
+- **📁 GitHub**: https://github.com/shinpei-shimura/ar-cake
 
 ## データアーキテクチャ
 
@@ -191,8 +193,11 @@ https://3000-i3wj386fyitskdom7sb1e-6532622b.e2b.dev/register?order_id=ORD123&ema
 
 ## デプロイメント
 - **プラットフォーム**: Cloudflare Pages + Workers
-- **ステータス**: ✅ ローカル開発環境で正常動作中
-- **技術スタック**: Hono + TypeScript + TailwindCSS + D1 + R2
+- **ステータス**: 🌐 本番環境で稼働中
+- **プロジェクト名**: member-system
+- **本番URL**: https://bef07a01.member-system.pages.dev
+- **技術スタック**: Hono + TypeScript + TailwindCSS + D1
+- **データベース**: Cloudflare D1 (member-system-production)
 - **最終更新**: 2025-09-08
 
 ## 画像URL仕様
