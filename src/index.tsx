@@ -869,20 +869,54 @@ app.get('/dashboard', (c) => {
             <div class="grid lg:grid-cols-2 gap-6">
                 <!-- プロフィール情報 -->
                 <div class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">
-                        <i class="fas fa-user mr-2 text-green-600"></i>
-                        プロフィール
-                    </h2>
-                    <div id="profileInfo" class="space-y-3">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">
+                            <i class="fas fa-user mr-2 text-green-600"></i>
+                            プロフィール
+                        </h2>
+                        <button id="editToggleBtn" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm hidden">
+                            <i class="fas fa-edit mr-1"></i>
+                            編集
+                        </button>
+                    </div>
+                    
+                    <!-- 表示モード -->
+                    <div id="profileView" class="space-y-3">
                         <div class="text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin text-2xl"></i>
                             <p class="mt-2">読み込み中...</p>
                         </div>
                     </div>
-                    <button id="editProfileBtn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors hidden">
-                        <i class="fas fa-edit mr-2"></i>
-                        編集
-                    </button>
+                    
+                    <!-- 編集モード -->
+                    <div id="profileEdit" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">名前</label>
+                            <input type="text" id="editName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">メッセージ</label>
+                            <textarea id="editMessage" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="メッセージを入力してください"></textarea>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button id="saveProfileBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                                <i class="fas fa-save mr-2"></i>
+                                保存
+                            </button>
+                            <button id="cancelEditBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center">
+                                <i class="fas fa-times mr-2"></i>
+                                キャンセル
+                            </button>
+                        </div>
+                        
+                        <!-- 保存ステータス表示 -->
+                        <div id="saveStatus" class="hidden">
+                            <div class="flex items-center text-sm">
+                                <i id="saveIcon" class="mr-2"></i>
+                                <span id="saveText"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 画像管理 -->
@@ -900,34 +934,7 @@ app.get('/dashboard', (c) => {
                 </div>
             </div>
 
-            <!-- プロフィール編集モーダル -->
-            <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h3 class="text-lg font-semibold mb-4">プロフィール編集</h3>
-                        <form id="editForm">
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">名前</label>
-                                    <input type="text" id="editName" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">メッセージ</label>
-                                    <textarea id="editMessage" name="message" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                                </div>
-                            </div>
-                            <div class="flex space-x-3 mt-6">
-                                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                                    保存
-                                </button>
-                                <button type="button" id="cancelEdit" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">
-                                    キャンセル
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+
 
             <div id="message" class="mt-4 hidden"></div>
         </div>
@@ -956,18 +963,23 @@ app.get('/dashboard', (c) => {
                 document.getElementById('welcomeMessage').textContent = \`\${currentUser.name}さん、お疲れさまです\`;
                 
                 // プロフィール情報表示
-                const profileDiv = document.getElementById('profileInfo');
-                profileDiv.innerHTML = \`
-                    <div class="space-y-2">
+                const profileViewDiv = document.getElementById('profileView');
+                profileViewDiv.innerHTML = \`
+                    <div class="space-y-3 bg-gray-50 p-4 rounded-lg">
                         <div><strong>名前:</strong> \${currentUser.name}</div>
                         <div><strong>受注番号:</strong> \${currentUser.order_number}</div>
                         <div><strong>メールアドレス:</strong> \${currentUser.email}</div>
-                        <div><strong>メッセージ:</strong> \${currentUser.message || 'なし'}</div>
+                        <div><strong>メッセージ:</strong> \${currentUser.message || 'メッセージが設定されていません'}</div>
                         <div><strong>登録日:</strong> \${new Date(currentUser.created_at).toLocaleDateString('ja-JP')}</div>
                     </div>
                 \`;
                 
-                document.getElementById('editProfileBtn').classList.remove('hidden');
+                // 編集フォームに現在の値を設定
+                document.getElementById('editName').value = currentUser.name;
+                document.getElementById('editMessage').value = currentUser.message || '';
+                
+                document.getElementById('editToggleBtn').classList.remove('hidden');
+                setupAutoSave();
                 loadImages();
             }
 
@@ -1092,35 +1104,189 @@ app.get('/dashboard', (c) => {
                 }
             });
 
-            document.getElementById('editProfileBtn').addEventListener('click', () => {
+            // インライン編集機能
+            document.getElementById('editToggleBtn').addEventListener('click', () => {
+                toggleEditMode(true);
+            });
+
+            document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                // 元の値に戻す
                 document.getElementById('editName').value = currentUser.name;
                 document.getElementById('editMessage').value = currentUser.message || '';
-                document.getElementById('editModal').classList.remove('hidden');
+                toggleEditMode(false);
             });
 
-            document.getElementById('cancelEdit').addEventListener('click', () => {
-                document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+                await saveProfile();
             });
 
-            document.getElementById('editForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
+            // 編集モード切り替え
+            function toggleEditMode(isEditing) {
+                const profileView = document.getElementById('profileView');
+                const profileEdit = document.getElementById('profileEdit');
+                const toggleBtn = document.getElementById('editToggleBtn');
+
+                if (isEditing) {
+                    profileView.classList.add('hidden');
+                    profileEdit.classList.remove('hidden');
+                    toggleBtn.classList.add('hidden');
+                } else {
+                    profileView.classList.remove('hidden');
+                    profileEdit.classList.add('hidden');
+                    toggleBtn.classList.remove('hidden');
+                }
+            }
+
+            // プロフィール保存機能
+            async function saveProfile() {
+                const name = document.getElementById('editName').value.trim();
+                const message = document.getElementById('editMessage').value.trim();
+
+                if (!name) {
+                    showMessage('名前を入力してください', 'error');
+                    return;
+                }
+
+                // 保存ステータス表示
+                showSaveStatus('saving');
+
                 try {
-                    const formData = new FormData(e.target);
-                    const updateData = {
-                        name: formData.get('name'),
-                        message: formData.get('message')
-                    };
-
+                    const updateData = { name, message };
                     const response = await axios.put('/api/users/me', updateData);
+                    
                     if (response.data.success) {
                         currentUser = response.data.data;
                         updateUI();
-                        document.getElementById('editModal').classList.add('hidden');
-                        showMessage('プロフィールを更新しました', 'success');
+                        toggleEditMode(false);
+                        showSaveStatus('success');
+                        showMessage('プロフィールを保存しました', 'success');
+                    } else {
+                        showSaveStatus('error');
+                        showMessage('保存に失敗しました', 'error');
                     }
                 } catch (error) {
-                    showMessage(error.response?.data?.message || '更新に失敗しました', 'error');
+                    showSaveStatus('error');
+                    showMessage(error.response?.data?.message || '保存に失敗しました', 'error');
+                }
+            }
+
+            // 保存ステータス表示
+            function showSaveStatus(status) {
+                const statusDiv = document.getElementById('saveStatus');
+                const saveIcon = document.getElementById('saveIcon');
+                const saveText = document.getElementById('saveText');
+
+                statusDiv.classList.remove('hidden');
+
+                switch (status) {
+                    case 'saving':
+                        saveIcon.className = 'fas fa-spinner fa-spin text-blue-600';
+                        saveText.textContent = '保存中...';
+                        saveText.className = 'text-blue-600';
+                        break;
+                    case 'success':
+                        saveIcon.className = 'fas fa-check-circle text-green-600';
+                        saveText.textContent = '保存完了';
+                        saveText.className = 'text-green-600';
+                        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+                        break;
+                    case 'error':
+                        saveIcon.className = 'fas fa-exclamation-circle text-red-600';
+                        saveText.textContent = '保存失敗';
+                        saveText.className = 'text-red-600';
+                        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+                        break;
+                    case 'changed':
+                        saveIcon.className = 'fas fa-edit text-orange-600';
+                        saveText.textContent = '未保存の変更があります';
+                        saveText.className = 'text-orange-600';
+                        break;
+                }
+            }
+
+            // 自動保存機能（入力変更検知）
+            let autoSaveTimeout = null;
+            let hasUnsavedChanges = false;
+
+            function setupAutoSave() {
+                const nameInput = document.getElementById('editName');
+                const messageInput = document.getElementById('editMessage');
+
+                function handleInputChange() {
+                    hasUnsavedChanges = true;
+                    showSaveStatus('changed');
+
+                    // 既存のタイマーをクリア
+                    if (autoSaveTimeout) {
+                        clearTimeout(autoSaveTimeout);
+                    }
+
+                    // 3秒後に自動保存
+                    autoSaveTimeout = setTimeout(async () => {
+                        if (hasUnsavedChanges) {
+                            await autoSaveProfile();
+                        }
+                    }, 3000);
+                }
+
+                nameInput.addEventListener('input', handleInputChange);
+                messageInput.addEventListener('input', handleInputChange);
+            }
+
+            // 自動保存実行
+            async function autoSaveProfile() {
+                const name = document.getElementById('editName').value.trim();
+                const message = document.getElementById('editMessage').value.trim();
+
+                if (!name) {
+                    return; // 名前が空の場合は保存しない
+                }
+
+                // 変更がない場合はスキップ
+                if (name === currentUser.name && message === (currentUser.message || '')) {
+                    hasUnsavedChanges = false;
+                    document.getElementById('saveStatus').classList.add('hidden');
+                    return;
+                }
+
+                showSaveStatus('saving');
+
+                try {
+                    const updateData = { name, message };
+                    const response = await axios.put('/api/users/me', updateData);
+                    
+                    if (response.data.success) {
+                        currentUser = response.data.data;
+                        hasUnsavedChanges = false;
+                        showSaveStatus('success');
+                        
+                        // プロフィール表示も更新（編集モード中でも）
+                        const profileViewDiv = document.getElementById('profileView');
+                        profileViewDiv.innerHTML = \`
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                <div><strong>名前:</strong> \${currentUser.name}</div>
+                                <div><strong>受注番号:</strong> \${currentUser.order_number}</div>
+                                <div><strong>メールアドレス:</strong> \${currentUser.email}</div>
+                                <div><strong>メッセージ:</strong> \${currentUser.message || 'メッセージが設定されていません'}</div>
+                                <div><strong>登録日:</strong> \${new Date(currentUser.created_at).toLocaleDateString('ja-JP')}</div>
+                            </div>
+                        \`;
+                    } else {
+                        showSaveStatus('error');
+                    }
+                } catch (error) {
+                    showSaveStatus('error');
+                    console.error('Auto-save error:', error);
+                }
+            }
+
+            // キーボードショートカット（Ctrl+S で保存）
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    if (!document.getElementById('profileEdit').classList.contains('hidden')) {
+                        saveProfile();
+                    }
                 }
             });
 
