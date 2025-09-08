@@ -94,6 +94,14 @@ app.get('/register', (c) => {
                     </h1>
                 </div>
 
+                <!-- URLパラメーター自動入力の案内 -->
+                <div id="autoFillNotice" class="hidden mb-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-magic text-teal-600 mr-2"></i>
+                        <span class="text-sm font-medium text-teal-800">URLパラメーターから情報が自動入力されました</span>
+                    </div>
+                </div>
+
                 <form id="registerForm" enctype="multipart/form-data">
                     <div class="grid md:grid-cols-2 gap-6">
                         <!-- 基本情報 -->
@@ -168,6 +176,99 @@ app.get('/register', (c) => {
         </div>
 
         <script>
+            // URLパラメーターから値を取得する関数
+            function getUrlParameter(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
+            // ページ読み込み時にURLパラメーターをフォームに設定
+            document.addEventListener('DOMContentLoaded', function() {
+                // URLパラメーターから受注番号を取得
+                const orderNumber = getUrlParameter('order_id') || getUrlParameter('order_number') || getUrlParameter('id');
+                
+                if (orderNumber) {
+                    const orderNumberInput = document.querySelector('input[name="order_number"]');
+                    if (orderNumberInput) {
+                        orderNumberInput.value = orderNumber;
+                        // 自動入力されたことを視覚的に示す
+                        orderNumberInput.style.backgroundColor = '#e6fffa';
+                        orderNumberInput.style.borderColor = '#2dd4bf';
+                        
+                        // 3秒後に通常の色に戻す
+                        setTimeout(() => {
+                            orderNumberInput.style.backgroundColor = '';
+                            orderNumberInput.style.borderColor = '';
+                        }, 3000);
+                        
+                        console.log('受注番号が自動入力されました:', orderNumber);
+                    }
+                }
+
+                // その他のパラメーターも対応
+                const email = getUrlParameter('email');
+                if (email) {
+                    const emailInput = document.querySelector('input[name="email"]');
+                    if (emailInput) {
+                        emailInput.value = email;
+                        emailInput.style.backgroundColor = '#e6fffa';
+                        emailInput.style.borderColor = '#2dd4bf';
+                        setTimeout(() => {
+                            emailInput.style.backgroundColor = '';
+                            emailInput.style.borderColor = '';
+                        }, 3000);
+                    }
+                }
+
+                const name = getUrlParameter('name') || getUrlParameter('customer_name');
+                if (name) {
+                    const nameInput = document.querySelector('input[name="name"]');
+                    if (nameInput) {
+                        nameInput.value = decodeURIComponent(name);
+                        nameInput.style.backgroundColor = '#e6fffa';
+                        nameInput.style.borderColor = '#2dd4bf';
+                        setTimeout(() => {
+                            nameInput.style.backgroundColor = '';
+                            nameInput.style.borderColor = '';
+                        }, 3000);
+                    }
+                }
+
+                const message = getUrlParameter('message');
+                if (message) {
+                    const messageInput = document.querySelector('textarea[name="message"]');
+                    if (messageInput) {
+                        messageInput.value = decodeURIComponent(message);
+                        messageInput.style.backgroundColor = '#e6fffa';
+                        messageInput.style.borderColor = '#2dd4bf';
+                        setTimeout(() => {
+                            messageInput.style.backgroundColor = '';
+                            messageInput.style.borderColor = '';
+                        }, 3000);
+                    }
+                }
+
+                // パラメーター情報を表示（デバッグ用・本番では削除可能）
+                if (orderNumber || email || name || message) {
+                    // 自動入力通知を表示
+                    const notice = document.getElementById('autoFillNotice');
+                    if (notice) {
+                        notice.classList.remove('hidden');
+                        // 5秒後に通知を非表示
+                        setTimeout(() => {
+                            notice.classList.add('hidden');
+                        }, 5000);
+                    }
+
+                    console.log('URLパラメーターから自動入力:', {
+                        order_number: orderNumber,
+                        email: email,
+                        name: name ? decodeURIComponent(name) : null,
+                        message: message ? decodeURIComponent(message) : null
+                    });
+                }
+            });
+
             document.getElementById('registerForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
