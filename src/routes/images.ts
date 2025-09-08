@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { CloudflareBindings, ApiResponse, Image } from '../types';
 import { getTokenFromCookie, verifyToken } from '../utils/auth';
 import { getUserImages, saveImageRecord, deleteImageRecord } from '../utils/database';
+import { convertToJPG, isSupportedImageFormat, calculateOptimalQuality } from '../utils/imageConverter';
 
 // メールアドレスからローカル部分（@より前）を取得
 function getEmailLocalPart(email: string): string {
@@ -89,26 +90,72 @@ imageRoutes.post('/upload', authMiddleware, async (c) => {
       }
 
       try {
-        // R2ストレージにアップロード
-        const fileName = `user_${userId}_${String(i).padStart(2, '0')}.${file.type.split('/')[1]}`;
-        const filePath = `users/${userId}/${fileName}`;
+        // 画像形式をチェック
+        if (!isSupportedImageFormat(file.type)) {
+          return c.json<ApiResponse>({
+            success: false,
+            message: `画像${i}: サポートされていない画像形式です（${file.type}）`
+          }, 400);
+        }
 
-        const arrayBuffer = await file.arrayBuffer();
-        await R2.put(filePath, arrayBuffer, {
+        const originalArrayBuffer = await file.arrayBuffer();
+        
+        // 画像をJPGに変換
+        let finalBuffer: ArrayBuffer;
+        let finalMimeType: string;
+        let finalFileName: string;
+        let conversionInfo = '';
+
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+          // すでにJPGの場合はそのまま使用
+          finalBuffer = originalArrayBuffer;
+          finalMimeType = 'image/jpeg';
+          finalFileName = `user_${userId}_${String(i).padStart(2, '0')}.jpg`;
+        } else {
+          // 他の形式からJPGに変換
+          try {
+            const quality = calculateOptimalQuality(originalArrayBuffer.byteLength);
+            const converted = await convertToJPG(originalArrayBuffer, file.type, {
+              quality: quality,
+              maxWidth: 2048,
+              maxHeight: 2048,
+              maintainAspectRatio: true
+            });
+            
+            finalBuffer = converted.buffer;
+            finalMimeType = converted.mimeType;
+            finalFileName = `user_${userId}_${String(i).padStart(2, '0')}.jpg`;
+            
+            const compressionRatio = ((originalArrayBuffer.byteLength - converted.convertedSize) / originalArrayBuffer.byteLength * 100).toFixed(1);
+            conversionInfo = ` (${file.type} → JPG, ${compressionRatio}% 圧縮)`;
+            
+          } catch (conversionError) {
+            console.error(`Image conversion error for image ${i}:`, conversionError);
+            return c.json<ApiResponse>({
+              success: false,
+              message: `画像${i}: JPG変換に失敗しました - ${conversionError instanceof Error ? conversionError.message : 'Unknown error'}`
+            }, 500);
+          }
+        }
+
+        // R2ストレージにアップロード（JPG形式）
+        const filePath = `users/${userId}/${finalFileName}`;
+        
+        await R2.put(filePath, finalBuffer, {
           httpMetadata: {
-            contentType: file.type,
+            contentType: finalMimeType,
           },
         });
 
-        // データベースに記録保存
+        // データベースに記録保存（JPG形式として保存）
         const success = await saveImageRecord(
           DB,
           userId,
           i,
-          file.name,
+          file.name + conversionInfo, // 元のファイル名 + 変換情報
           filePath,
-          file.size,
-          file.type
+          finalBuffer.byteLength,
+          finalMimeType
         );
 
         if (success) {
@@ -116,10 +163,10 @@ imageRoutes.post('/upload', authMiddleware, async (c) => {
             id: 0, // 仮のID
             user_id: userId,
             image_number: i,
-            file_name: file.name,
+            file_name: file.name + conversionInfo,
             file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
+            file_size: finalBuffer.byteLength,
+            mime_type: finalMimeType,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
