@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "member-system",
   "compatibility_date": "2025-09-08",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -18,14 +18,14 @@
   "r2_buckets": [
     {
       "binding": "R2",
-      "bucket_name": "webapp-files"
+      "bucket_name": "member-system-files"
     }
   ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "webapp-production",
-      "database_id": "placeholder-will-be-replaced-after-cloudflare-setup"
+      "database_name": "member-system-production",
+      "database_id": "363ec3cd-42e8-4c70-b470-4328b1e18c56"
     }
   ],
   // "ai": {
