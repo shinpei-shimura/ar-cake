@@ -246,12 +246,17 @@ imageRoutes.delete('/:imageNumber', authMiddleware, async (c) => {
   }
 });
 
-// 新しい画像取得（メールローカル部分ベースURL）: /api/images/:emailLocal/:imageNumber
+// 新しい画像取得（メールローカル部分ベースURL）: /api/images/:emailLocal/:imageNumber(.jpg)
 imageRoutes.get('/:emailLocal/:imageNumber', async (c) => {
   try {
     const { DB, R2 } = c.env;
     const emailLocal = c.req.param('emailLocal');
-    const imageNumber = c.req.param('imageNumber');
+    let imageNumber = c.req.param('imageNumber');
+
+    // .jpg拡張子を削除（もしあれば）
+    if (imageNumber.endsWith('.jpg')) {
+      imageNumber = imageNumber.slice(0, -4);
+    }
 
     // 画像番号を2桁の数字に正規化（例：1 -> 01, 05 -> 05）
     const normalizedImageNumber = imageNumber.padStart(2, '0');
