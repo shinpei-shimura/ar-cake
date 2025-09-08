@@ -620,10 +620,10 @@ app.get('/admin', (c) => {
                                     <div class="flex items-center justify-between mb-2">
                                         <h5 class="font-medium">画像\${img.image_number}</h5>
                                         <div class="flex space-x-2">
-                                            <a href="/api/images/\${img.image_number}?userId=\${user.id}" target="_blank" class="text-blue-600 hover:text-blue-700">
+                                            <a href="/api/images/\${encodeURIComponent(user.name)}/\${String(img.image_number).padStart(2, '0')}" target="_blank" class="text-blue-600 hover:text-blue-700">
                                                 <i class="fas fa-external-link-alt"></i>
                                             </a>
-                                            <button onclick="copyImageUrl('/api/images/\${img.image_number}?userId=\${user.id}')" class="text-green-600 hover:text-green-700">
+                                            <button onclick="copyImageUrl('/api/images/\${encodeURIComponent(user.name)}/\${String(img.image_number).padStart(2, '0')}')" class="text-green-600 hover:text-green-700">
                                                 <i class="fas fa-copy"></i>
                                             </button>
                                         </div>
@@ -633,9 +633,9 @@ app.get('/admin', (c) => {
                                         <div>サイズ: \${(img.file_size / 1024 / 1024).toFixed(2)}MB</div>
                                         <div>アップロード日: \${new Date(img.created_at).toLocaleDateString('ja-JP')}</div>
                                         <div class="mt-2">
-                                            <span class="text-gray-500">URL: </span>
+                                            <span class="text-gray-500">新URL: </span>
                                             <code class="bg-gray-100 px-2 py-1 rounded text-xs break-all">
-                                                \${window.location.origin}/api/images/\${img.image_number}?userId=\${user.id}
+                                                \${window.location.origin}/api/images/\${encodeURIComponent(user.name)}/\${String(img.image_number).padStart(2, '0')}
                                             </code>
                                         </div>
                                     </div>
@@ -736,16 +736,16 @@ app.get('/admin', (c) => {
                                         <span class="font-medium">\${new Date(img.created_at).toLocaleDateString('ja-JP')}</span>
                                     </div>
                                     <div>
-                                        <span class="text-gray-500">URL:</span>
-                                        <code class="bg-gray-100 px-1 rounded text-xs">/api/images/\${img.image_number}?userId=\${img.user_id}</code>
+                                        <span class="text-gray-500">新URL:</span>
+                                        <code class="bg-gray-100 px-1 rounded text-xs">/api/images/\${encodeURIComponent(img.user_name)}/\${String(img.image_number).padStart(2, '0')}</code>
                                     </div>
                                 </div>
                             </div>
                             <div class="flex space-x-2">
-                                <a href="/api/images/\${img.image_number}?userId=\${img.user_id}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
+                                <a href="/api/images/\${encodeURIComponent(img.user_name)}/\${String(img.image_number).padStart(2, '0')}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>
-                                <button onclick="copyImageUrl('/api/images/\${img.image_number}?userId=\${img.user_id}')" class="text-green-600 hover:text-green-700 p-1">
+                                <button onclick="copyImageUrl('/api/images/\${encodeURIComponent(img.user_name)}/\${String(img.image_number).padStart(2, '0')}')" class="text-green-600 hover:text-green-700 p-1">
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
@@ -1021,7 +1021,7 @@ app.get('/dashboard', (c) => {
                                     </div>
                                 </div>
                                 <div class="flex space-x-2">
-                                    <a href="/api/images/\${i}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
+                                    <a href="/api/images/\${encodeURIComponent(currentUser.name)}/\${String(i).padStart(2, '0')}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <button onclick="deleteImage(\${i})" class="text-red-600 hover:text-red-700 p-1">

@@ -194,7 +194,58 @@ imageRoutes.delete('/:imageNumber', authMiddleware, async (c) => {
   }
 });
 
-// 画像取得（R2から直接配信）
+// 新しい画像取得（ユーザー名ベースURL）: /api/images/:userName/:imageNumber
+imageRoutes.get('/:userName/:imageNumber', async (c) => {
+  try {
+    const { DB, R2 } = c.env;
+    const userName = c.req.param('userName');
+    const imageNumber = c.req.param('imageNumber');
+
+    // 画像番号を2桁の数字に正規化（例：1 -> 01, 05 -> 05）
+    const normalizedImageNumber = imageNumber.padStart(2, '0');
+    const imageNumberInt = parseInt(imageNumber);
+
+    if (imageNumberInt < 1 || imageNumberInt > 5 || isNaN(imageNumberInt)) {
+      return c.notFound();
+    }
+
+    // ユーザー名でユーザーを検索
+    const user = await DB.prepare(`
+      SELECT id, name FROM users WHERE name = ?
+    `).bind(userName).first();
+
+    if (!user) {
+      return c.notFound();
+    }
+
+    // 画像情報を取得
+    const images = await getUserImages(DB, user.id as number);
+    const image = images.find(img => img.image_number === imageNumberInt);
+
+    if (!image) {
+      return c.notFound();
+    }
+
+    // R2から画像を取得
+    const object = await R2.get(image.file_path);
+    if (!object) {
+      return c.notFound();
+    }
+
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': image.mime_type || 'image/jpeg',
+        'Cache-Control': 'public, max-age=86400'
+      }
+    });
+
+  } catch (error) {
+    console.error('Get image by username error:', error);
+    return c.notFound();
+  }
+});
+
+// 既存の画像取得（管理者用・認証必須）: /api/images/:imageNumber
 imageRoutes.get('/:imageNumber', authMiddleware, async (c) => {
   try {
     const { DB, R2 } = c.env;
