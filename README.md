@@ -1,21 +1,141 @@
-```txt
+# 会員登録・ファイル管理システム
+
+## プロジェクト概要
+- **名前**: webapp（会員登録・ファイル管理システム）
+- **目標**: シンプルな会員登録・ログイン・ファイル管理システム（元々のXサーバー用要件をCloudflare Pagesに現代化）
+- **主要機能**: 会員登録、ログイン、画像アップロード（最大5枚）、メッセージ管理、プロフィール編集
+
+## 現在完了している機能
+
+### ✅ 認証システム
+- 会員登録（名前、受注番号、メールアドレス、パスワード、メッセージ）
+- ログイン・ログアウト機能
+- JWT認証とセッション管理
+- パスワードのbcryptjs暗号化
+
+### ✅ ファイル管理システム
+- 画像アップロード機能（最大5枚、01-05の連番管理）
+- Cloudflare R2ストレージ統合
+- 画像表示・削除機能
+- ファイル形式とサイズバリデーション（10MB制限）
+
+### ✅ ユーザー管理
+- プロフィール表示・編集機能
+- ユーザーダッシュボード
+- 個人データ管理（名前、メッセージ編集）
+
+### ✅ フロントエンドUI
+- レスポンシブWebデザイン（TailwindCSS使用）
+- ホームページ、登録ページ、ログインページ、ダッシュボード
+- 直感的なUIと日本語対応
+- Font Awesome アイコン統合
+
+## 機能的エントリーURI
+
+### 🏠 メインページ
+- **GET** `/` - ホームページ（登録・ログインへのリンク）
+
+### 🔐 認証API
+- **POST** `/api/auth/register` - 会員登録
+  - Body: `{name, order_number, email, password, message?}`
+- **POST** `/api/auth/login` - ログイン
+  - Body: `{email, password}`
+- **POST** `/api/auth/logout` - ログアウト
+
+### 👤 ユーザー管理API
+- **GET** `/api/users/me` - 現在のユーザー情報取得（認証必須）
+- **PUT** `/api/users/me` - ユーザー情報更新（認証必須）
+  - Body: `{name?, message?}`
+
+### 🖼️ 画像管理API
+- **GET** `/api/images/my-images` - ユーザーの画像一覧（認証必須）
+- **POST** `/api/images/upload` - 画像アップロード（認証必須）
+  - FormData: `image_1`, `image_2`, ..., `image_5`
+- **GET** `/api/images/:imageNumber` - 画像表示（認証必須）
+- **DELETE** `/api/images/:imageNumber` - 画像削除（認証必須）
+
+### 📄 Webページ
+- **GET** `/register` - 会員登録ページ
+- **GET** `/login` - ログインページ
+- **GET** `/dashboard` - ダッシュボード（認証必須）
+
+## URLs
+- **開発環境**: https://3000-i3wj386fyitskdom7sb1e-6532622b.e2b.dev
+- **GitHub**: （後でプッシュ予定）
+
+## データアーキテクチャ
+
+### データモデル
+- **Users**: ユーザー情報（名前、受注番号、メール、パスワード、メッセージ）
+- **Images**: 画像メタデータ（連番、ファイル名、パス、サイズ、MIME型）
+- **Sessions**: ログインセッション管理
+
+### ストレージサービス
+- **Cloudflare D1**: SQLiteベースの分散データベース（ユーザー・画像メタデータ）
+- **Cloudflare R2**: S3互換オブジェクトストレージ（画像ファイル本体）
+- **JWT + Cookie**: セッション管理
+
+### データフロー
+1. ユーザー登録 → D1にユーザー情報保存
+2. 画像アップロード → R2にファイル保存 + D1にメタデータ保存
+3. 認証 → JWT生成 + D1にセッション保存
+4. 画像表示 → D1からメタデータ取得 → R2からファイル配信
+
+## ユーザーガイド
+
+### 新規登録
+1. トップページから「新規会員登録」をクリック
+2. 必要情報を入力（名前、受注番号、メールアドレス、パスワード）
+3. オプション：メッセージと画像（最大5枚）をアップロード
+4. 登録完了後、自動的にダッシュボードにリダイレクト
+
+### ログイン
+1. トップページから「ログイン」をクリック
+2. メールアドレスとパスワードを入力
+3. ログイン成功後、ダッシュボードにリダイレクト
+
+### ダッシュボード使用方法
+- **プロフィール確認**: 左側パネルで基本情報確認
+- **プロフィール編集**: 「編集」ボタンで名前・メッセージ変更
+- **画像管理**: 右側パネルで画像一覧確認・アップロード・削除
+- **ログアウト**: 右上の「ログアウト」ボタン
+
+### テストアカウント
+- **メール**: tanaka@example.com
+- **パスワード**: password123
+- **受注番号**: ORD001
+
+## デプロイメント
+- **プラットフォーム**: Cloudflare Pages + Workers
+- **ステータス**: ✅ ローカル開発環境で正常動作中
+- **技術スタック**: Hono + TypeScript + TailwindCSS + D1 + R2
+- **最終更新**: 2025-09-08
+
+## 開発環境セットアップ
+
+```bash
+# 依存関係インストール
 npm install
-npm run dev
+
+# ローカルデータベース初期化
+npm run db:migrate:local
+npm run db:seed
+
+# 開発サーバー起動
+npm run build
+npm run dev:d1
+
+# テスト
+curl http://localhost:3000
 ```
 
-```txt
-npm run deploy
-```
+## 今後の拡張予定
+- ユーザープロフィール画像機能
+- 画像にタグ・コメント機能
+- 管理者用ダッシュボード
+- メール通知機能
+- バックアップ・エクスポート機能
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
+---
 
-```txt
-npm run cf-typegen
-```
-
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
-
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
-```
+**注意**: これは要件定義書に基づいた現代的な実装です。Cloudflare Pagesの制約に合わせて、PHPではなくHono/TypeScriptで実装し、ファイルシステムではなくR2ストレージを使用しています。
