@@ -392,20 +392,13 @@ app.get('/dashboard', (c) => {
                 <div class="bg-white rounded-lg shadow-md p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">
                         <i class="fas fa-images mr-2 text-purple-600"></i>
-                        画像管理
+                        画像管理（5枚まで）
                     </h2>
                     <div id="imageGallery" class="space-y-3">
                         <div class="text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin text-2xl"></i>
                             <p class="mt-2">読み込み中...</p>
                         </div>
-                    </div>
-                    <div class="mt-4 space-y-2">
-                        <input type="file" id="imageUpload" accept="image/*" multiple class="hidden">
-                        <button id="uploadBtn" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                            <i class="fas fa-upload mr-2"></i>
-                            画像をアップロード
-                        </button>
                     </div>
                 </div>
             </div>
@@ -495,44 +488,65 @@ app.get('/dashboard', (c) => {
                 }
             }
 
-            // 画像表示
+            // 画像表示（5つのスロット表示）
             function displayImages() {
                 const galleryDiv = document.getElementById('imageGallery');
                 
-                if (currentImages.length === 0) {
-                    galleryDiv.innerHTML = \`
-                        <div class="text-center text-gray-500 py-8">
-                            <i class="fas fa-image text-4xl mb-2"></i>
-                            <p>画像がアップロードされていません</p>
-                        </div>
-                    \`;
-                    return;
+                // 5つのスロットを作成
+                const slots = [];
+                for (let i = 1; i <= 5; i++) {
+                    const existingImage = currentImages.find(img => img.image_number === i);
+                    
+                    if (existingImage) {
+                        // 既存画像がある場合
+                        slots.push(\`
+                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-green-50">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-green-100 rounded-lg p-2">
+                                        <i class="fas fa-image text-2xl text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-green-800">画像\${i}</p>
+                                        <p class="text-sm text-gray-600">\${existingImage.file_name}</p>
+                                        <p class="text-xs text-gray-500">\${(existingImage.file_size / 1024 / 1024).toFixed(2)}MB</p>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="/api/images/\${i}" target="_blank" class="text-blue-600 hover:text-blue-700 p-1">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button onclick="deleteImage(\${i})" class="text-red-600 hover:text-red-700 p-1">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        \`);
+                    } else {
+                        // 空きスロットの場合
+                        slots.push(\`
+                            <div class="flex items-center justify-between p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="bg-gray-200 rounded-lg p-2">
+                                        <i class="fas fa-plus text-2xl text-gray-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-600">画像\${i}</p>
+                                        <p class="text-sm text-gray-500">未アップロード</p>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <input type="file" id="imageInput\${i}" accept="image/*" class="hidden" onchange="uploadSingleImage(\${i}, this)">
+                                    <button onclick="document.getElementById('imageInput\${i}').click()" class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition-colors text-sm">
+                                        <i class="fas fa-upload mr-1"></i>
+                                        選択
+                                    </button>
+                                </div>
+                            </div>
+                        \`);
+                    }
                 }
 
-                const imageGrid = currentImages.map(img => \`
-                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="bg-gray-100 rounded-lg p-2">
-                                <i class="fas fa-image text-2xl text-gray-600"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium">画像\${img.image_number}</p>
-                                <p class="text-sm text-gray-500">\${img.file_name}</p>
-                                <p class="text-xs text-gray-400">\${(img.file_size / 1024 / 1024).toFixed(2)}MB</p>
-                            </div>
-                        </div>
-                        <div class="flex space-x-2">
-                            <a href="/api/images/\${img.image_number}" target="_blank" class="text-blue-600 hover:text-blue-700">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <button onclick="deleteImage(\${img.image_number})" class="text-red-600 hover:text-red-700">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                \`).join('');
-
-                galleryDiv.innerHTML = imageGrid;
+                galleryDiv.innerHTML = slots.join('');
             }
 
             // メッセージ表示
@@ -613,36 +627,45 @@ app.get('/dashboard', (c) => {
                 }
             });
 
-            document.getElementById('uploadBtn').addEventListener('click', () => {
-                document.getElementById('imageUpload').click();
-            });
+            // 個別画像アップロード機能（グローバル関数として定義）
+            window.uploadSingleImage = async function(imageNumber, inputElement) {
+                const file = inputElement.files[0];
+                if (!file) return;
 
-            document.getElementById('imageUpload').addEventListener('change', async (e) => {
-                const files = Array.from(e.target.files);
-                if (files.length === 0) return;
+                // ファイルタイプチェック
+                if (!file.type.startsWith('image/')) {
+                    showMessage('画像ファイルを選択してください', 'error');
+                    inputElement.value = '';
+                    return;
+                }
+
+                // ファイルサイズチェック（10MB制限）
+                if (file.size > 10 * 1024 * 1024) {
+                    showMessage('ファイルサイズが大きすぎます（10MB以下にしてください）', 'error');
+                    inputElement.value = '';
+                    return;
+                }
 
                 const formData = new FormData();
-                files.forEach((file, index) => {
-                    if (index < 5) {
-                        formData.append(\`image_\${index + 1}\`, file);
-                    }
-                });
+                formData.append(\`image_\${imageNumber}\`, file);
 
                 try {
+                    showMessage(\`画像\${imageNumber}をアップロード中...\`, 'info');
+                    
                     const response = await axios.post('/api/images/upload', formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                     
                     if (response.data.success) {
-                        showMessage(\`\${response.data.data.length}枚の画像をアップロードしました\`, 'success');
+                        showMessage(\`画像\${imageNumber}をアップロードしました\`, 'success');
                         loadImages();
                     }
                 } catch (error) {
-                    showMessage(error.response?.data?.message || 'アップロードに失敗しました', 'error');
+                    showMessage(error.response?.data?.message || \`画像\${imageNumber}のアップロードに失敗しました\`, 'error');
+                } finally {
+                    inputElement.value = '';
                 }
-                
-                e.target.value = '';
-            });
+            }
 
             // 初期化
             checkAuth();

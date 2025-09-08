@@ -124,3 +124,41 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
+
+/* 画像スロットのスタイル */
+.image-slot {
+  transition: all 0.3s ease;
+}
+
+.image-slot:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-slot-uploaded {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #10b981;
+}
+
+.image-slot-empty {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.image-slot-empty:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-color: #9333ea;
+}
+
+/* アップロードボタンの改善 */
+.upload-btn {
+  background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+}
